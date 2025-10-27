@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Space Invaders — Lobby</title>
+    <link rel="stylesheet" href="lobby.css">
+</head>
+<body>
+    <audio id="bg-music" src="audios/bg-music.mp3" autoplay loop></audio>
+
+    <div id="lobby">
+        <h1>Space Invaders</h1>
+
+        <div id="name-input">
+            <label for="player-name">Enter Your Name:</label>
+            <input type="text" id="player-name" placeholder="Your name" required />
+        </div>
+
+        <div id="lobby-buttons">
+            <button id="play-btn">Play</button>
+            <button id="instructions-btn">Instructions</button>
+        </div>
+    </div>
+
+    <script src="lobby.js"></script>
+</body>
+</html>

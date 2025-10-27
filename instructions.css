@@ -1,0 +1,67 @@
+body {
+    font-family: 'Press Start 2P', monospace;
+    background-image: url("images/bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-color: #111; 
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+#instructions {   
+    background-image: url("images/bg.gif");
+    background-size: cover;
+    background-position: center;
+    overflow: hidden; 
+    z-index: 999; 
+    border: 8px solid #33cc33;
+    box-shadow: 0 0 30px rgba(0, 200, 0, 0.8);
+    width: 60vw;
+    max-width: 700px;
+    min-height: 400px;
+    padding: 50px;
+    border-radius: 10px;
+}
+
+#instructions h1 {
+    color: white;
+    font-family: 'Press Start 2P', monospace;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+}
+
+#instructions ul {
+    list-style: none; 
+    padding: 0;
+    margin-bottom: 50px;
+    text-align: left; 
+    display: inline-block;
+}
+
+#instructions li {
+    color: #00FF66; 
+    font-size: 1.2em;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 0;
+}
+
+#instructions button {
+    background-color: #00FF66; 
+    color: black;
+    border: 2px solid #00FF66;
+    font-family: 'Press Start 2P', monospace;
+    text-transform: uppercase;
+    padding: 15px 30px;
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+#instructions button:hover {
+    background-color: black;
+    color: #00FF66;
+}

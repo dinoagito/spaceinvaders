@@ -1,0 +1,140 @@
+body {
+    font-family: 'Press Start 2P', monospace;
+    background-image: url("images/bg.jpg");
+    background-size: cover;
+    background-position: center;
+    margin: 0;
+    min-height: 100vh;
+    display: block; 
+    color: white;
+    z-index: 1;
+    text-shadow: none;
+    align-items: unset;
+    text-align: unset;
+}
+
+#si-game-area {
+    width: 90vw; 
+    max-width: 800px;
+    height: 90vh;
+    max-height: 1000px; 
+    position: fixed; 
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); 
+
+    border: 8px solid #33cc33; 
+    box-shadow: 0 0 30px rgba(0, 200, 0, 0.8); 
+    background-color: #000; 
+
+    background-image: url("images/bg.gif");
+    background-size: cover;
+    background-position: center;
+    overflow: hidden; 
+    z-index: 999;
+}
+
+#hud {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px 20px;
+    width: 180px;
+
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 255, 255, 0.4);
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    color: #00ffff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    text-shadow: 0 0 6px rgba(0,255,255,0.7);
+    z-index: 10001;
+}
+
+#hud div {
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(0,255,255,0.2);
+}
+
+#hud div:last-child {
+    border-bottom: none;
+}
+
+#power.ready {
+    color: #00ff7f;
+    text-shadow: 0 0 8px #00ff7f;
+}
+
+#power.used {
+    color: #ff4c4c;
+    text-shadow: 0 0 8px #ff4c4c;
+}
+
+#menu-btn {
+    margin-top: 20px;
+    
+    background-color: #00FF66; 
+    color: black; 
+    border: 2px solid #00FF66;
+    font-family: 'Press Start 2P', monospace;
+    text-transform: uppercase;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: 0.2s;
+    position: relative; 
+    display: block; 
+}
+
+#menu-btn:hover {
+    background-color: black;
+    color: #00FF66;
+}
+
+.mothership-hp-container {
+    position: absolute;
+    height: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #ff3333;
+    top: 15px; 
+}
+
+.mothership-hp-bar {
+    height: 100%;
+    background-color: #ff3333;
+    transition: width 0.3s ease-out; 
+}
+
+@keyframes screenWipe {
+    0% {
+        transform: scaleX(0); 
+    }
+    50% {
+        transform: scaleX(1); 
+        opacity: 1;
+    }
+    100% {
+        transform: scaleX(0); 
+        opacity: 0;
+    }
+}
+
+#level-transition-wipe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(86, 81, 81); 
+    transform-origin: center;
+    transform: scaleX(0);
+    opacity: 0;
+    z-index: 20000; 
+}
+
+#level-transition-wipe.active {
+    animation: screenWipe 1.2s ease-in-out forwards; 
+}
