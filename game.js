@@ -803,30 +803,4 @@ window.addEventListener("resize", () => {
     }
 });
 
-// --- MOBILE CONTROL BUTTONS ---
-const btnLeft = document.getElementById("btn-left");
-const btnRight = document.getElementById("btn-right");
-const btnFire = document.getElementById("btn-fire");
-const btnBomb = document.getElementById("btn-bomb");
-const btnPause = document.getElementById("btn-pause");
-
-if (btnLeft && btnRight && btnFire && btnBomb && btnPause) {
-  // Touch events for movement
-  btnLeft.addEventListener("touchstart", () => moveLeft = true);
-  btnLeft.addEventListener("touchend", () => moveLeft = false);
-
-  btnRight.addEventListener("touchstart", () => moveRight = true);
-  btnRight.addEventListener("touchend", () => moveRight = false);
-
-  // Fire / Bomb / Pause buttons
-  btnFire.addEventListener("touchstart", () => shoot());
-  btnBomb.addEventListener("touchstart", () => {
-    if (typeof useBomb === "function") useBomb();
-  });
-  btnPause.addEventListener("touchstart", () => {
-    if (typeof togglePause === "function") togglePause();
-  });
-}
-
-
 initializeGame();
