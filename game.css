@@ -138,3 +138,32 @@ body {
 #level-transition-wipe.active {
     animation: screenWipe 1.2s ease-in-out forwards; 
 }
+
+/* --- Mobile Controls --- */
+#mobile-controls {
+  position: fixed;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  z-index: 10000;
+}
+
+#mobile-controls button {
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  border: 2px solid #00ffff;
+  backdrop-filter: blur(4px);
+}
+
+@media (min-width: 768px) {
+  /* Hide mobile controls on desktop/laptop */
+  #mobile-controls {
+    display: none;
+  }
+}
