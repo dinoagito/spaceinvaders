@@ -12,6 +12,7 @@ const ASSETS = {
 
 const CONFIG = {
     fpsInterval: 1000 / 60,   
+    BASE_WIDTH: 800, // Reference width for scaling
     playerSpeed: 8,
     playerWidth: 64,
     playerHeight: 48,
@@ -31,7 +32,9 @@ const CONFIG = {
     enemyShootIntervalMs: 1200,
     mothershipHP: 18, 
     mothershipSizeFactor: 3.5, // BIG MOTHERSHIP!
-    mothershipShootIntervalMs: 500,
+    mothershipShootIntervalMs: 200, 
+    mothershipBurstCount: 4, 
+    mothershipBurstGapMs: 1000,  
     maxPlayerBullets: 4,
     bombCount: 1,
     bombKillPercentage: 0.7 
@@ -46,14 +49,16 @@ const State = {
     bullets: [],        
     enemies: [],       
     enemyBullets: [],     
-    mothership: null,     
+    mothership: null,
+    lastMothershipShootTime: 0,
+    mothershipShotsFired: 0, 
+    mothershipInCooldown: false,     
     score: 0,
     lives: CONFIG.playerStartLives,
     level: 1,
     running: false, 
     paused: false,
     lastEnemyShootTime: 0,
-    lastMothershipShootTime: 0,
     bombsLeft: CONFIG.bombCount,
     keys: {}
 };
@@ -61,9 +66,9 @@ const State = {
 document.getElementById("menu-btn").addEventListener("click", () => {
     const bgMusic = document.getElementById("bg-music");
     if (bgMusic && !bgMusic.paused) {
-        bgMusic.pause();
-        bgMusic.currentTime = 0;
-   }
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+   }
 
    window.location.href = "index.html"; 
 });
@@ -71,6 +76,7 @@ document.getElementById("menu-btn").addEventListener("click", () => {
 
 let bgMusic;
 let shootSound;
+let scaleFactor = 1;
 
 const existingBgAudio = document.getElementById('bg-music');
 if (existingBgAudio && typeof existingBgAudio.play === 'function') {
@@ -88,6 +94,11 @@ try {
   shootSound = new Audio(ASSETS.shootSound);
   shootSound.volume = 0.7;
 } catch (e) { shootSound = null; }
+
+function calculateScaleFactor() {
+    // Calculate scale relative to the base width (800px)
+    scaleFactor = State.width / CONFIG.BASE_WIDTH; 
+}
 
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function rectsOverlap(a, b) {
@@ -117,6 +128,7 @@ function setupUI() {
     State.gameArea = gameArea;
     State.width = gameArea.clientWidth; 
     State.height = gameArea.clientHeight;
+    calculateScaleFactor(); // Calculate scale based on new dimensions
     document.body.appendChild(gameArea);
 
     // Add level transition wipe element
@@ -150,70 +162,74 @@ function setupUI() {
     State.height = gameArea.clientHeight;
     
     // Initial overlay text update
-    showOverlay("Press ENTER / Z / SPACE to start! \n\nCONTROLS:\n • Move: ← →  \n\• Fire: ENTER/Z/Space\n • Bomb: B");
+    showOverlay("Press ENTER / Z / SPACE to start! \n\nCONTROLS:\n • Move: ← →  \n\• Fire: ENTER/Z/Space\n • Bomb: B");
 
 }
 
 let overlayEl = null;
 function showOverlay(text) {
-    // Always ensure overlay exists
-    let overlay = document.getElementById("game-overlay");
-    if (!overlay) {
-        overlay = document.createElement("div");
-        overlay.id = "game-overlay";
-        overlay.style.position = "fixed";
-        overlay.style.top = "0";
-        overlay.style.left = "0";
-        overlay.style.width = "100vw";
-        overlay.style.height = "100vh";
-        overlay.style.background = "rgba(0, 0, 0, 0.7)";
-        overlay.style.display = "flex";
-        overlay.style.flexDirection = "column";
-        overlay.style.justifyContent = "center";
-        overlay.style.alignItems = "center";
-        overlay.style.color = "#00ffff";
-        overlay.style.fontFamily = "'Consolas', 'Courier New', monospace";
-        overlay.style.fontSize = "22px";
-        overlay.style.textAlign = "center";
-        overlay.style.lineHeight = "1.6";
-        overlay.style.textShadow = "0 0 10px rgba(0,255,255,0.8)";
-        overlay.style.zIndex = "99999";
-        overlay.style.padding = "20px";
-        document.body.appendChild(overlay);
-    }
+    // Always ensure overlay exists
+    let overlay = document.getElementById("game-overlay");
+    if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "game-overlay";
+        overlay.style.position = "fixed";
+        overlay.style.top = "0";
+        overlay.style.left = "0";
+        overlay.style.width = "100vw";
+        overlay.style.height = "100vh";
+        overlay.style.background = "rgba(0, 0, 0, 0.7)";
+        overlay.style.display = "flex";
+        overlay.style.flexDirection = "column";
+        overlay.style.justifyContent = "center";
+        overlay.style.alignItems = "center";
+        overlay.style.color = "#00ffff";
+        overlay.style.fontFamily = "'Consolas', 'Courier New', monospace";
+        overlay.style.fontSize = "22px";
+        overlay.style.textAlign = "center";
+        overlay.style.lineHeight = "1.6";
+        overlay.style.textShadow = "0 0 10px rgba(0,255,255,0.8)";
+        overlay.style.zIndex = "99999";
+        overlay.style.padding = "20px";
+        document.body.appendChild(overlay);
+    }
 
-    // Support \n line breaks
-    overlay.innerHTML = text.replace(/\n/g, "<br>");
-    overlay.style.opacity = "1";
-    overlay.style.display = "flex";
+    // Support \n line breaks
+    overlay.innerHTML = text.replace(/\n/g, "<br>");
+    overlay.style.opacity = "1";
+    overlay.style.display = "flex";
 }
 
 function hideOverlay() {
-    const overlay = document.getElementById("game-overlay");
-    if (overlay) {
-        // Just hide, not remove — so showOverlay always works later
-        overlay.style.display = "none";
-        overlay.style.opacity = "0";
-    }
+    const overlay = document.getElementById("game-overlay");
+    if (overlay) {
+        // Just hide, not remove — so showOverlay always works later
+        overlay.style.display = "none";
+        overlay.style.opacity = "0";
+    }
 }
 
 function createPlayer() {
+    const pW = CONFIG.playerWidth * scaleFactor;
+    const pH = CONFIG.playerHeight * scaleFactor;
+    const startYOffset = 30 * scaleFactor;
+
     // remove old player
     if (State.player && State.player.el) State.player.el.remove();
 
     const el = document.createElement("img");
     el.src = ASSETS.playerImg;
     el.style.position = "absolute";
-    el.style.width = CONFIG.playerWidth + "px";
-    el.style.height = CONFIG.playerHeight + "px";
+    el.style.width = pW + "px";
+    el.style.height = pH + "px";
     // start bottom center
-    const startX = (State.width - CONFIG.playerWidth) / 2;
-    const startY = State.height - CONFIG.playerHeight - 30;
+    const startX = (State.width - pW) / 2;
+    const startY = State.height - pH - startYOffset;
     el.style.left = startX + "px";
     el.style.top = startY + "px";
     State.gameArea.appendChild(el);
 
-    State.player = { el, x: startX, y: startY, w: CONFIG.playerWidth, h: CONFIG.playerHeight };
+    State.player = { el, x: startX, y: startY, w: pW, h: pH };
 }
 
 function createEnemiesForLevel(level) {
@@ -226,50 +242,54 @@ function createEnemiesForLevel(level) {
     State.mothership = null;
     enemyDirection = 1;
 
-    // FIX: Removed the incorrect restartGame call from here.
-    
     const rows = CONFIG.enemyRowsPerLevel[level - 1] || CONFIG.enemyRowsPerLevel[CONFIG.enemyRowsPerLevel.length - 1];
     const cols = CONFIG.enemyCols;
-    const startX = CONFIG.enemyStartX;
-    const startY = CONFIG.enemyStartY;
+    const eW = CONFIG.enemyWidth * scaleFactor;
+    const eH = CONFIG.enemyHeight * scaleFactor;
+    const startX = CONFIG.enemyStartX * scaleFactor;
+    const startY = CONFIG.enemyStartY * scaleFactor;
+    const spacingX = CONFIG.enemySpacingX * scaleFactor;
+    const spacingY = CONFIG.enemySpacingY * scaleFactor;
+
 
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
         const el = document.createElement("img");
         el.src = ASSETS.enemyImg;
         el.style.position = "absolute";
-        el.style.width = CONFIG.enemyWidth + "px";
-        el.style.height = CONFIG.enemyHeight + "px";
-        const x = startX + c * CONFIG.enemySpacingX;
-        const y = startY + r * CONFIG.enemySpacingY;
+        el.style.width = eW + "px";
+        el.style.height = eH + "px";
+        const x = startX + c * spacingX;
+        const y = startY + r * spacingY;
         el.style.left = x + "px";
         el.style.top = y + "px";
         State.gameArea.appendChild(el);
-        State.enemies.push({ el, x, y, w: CONFIG.enemyWidth, h: CONFIG.enemyHeight, alive: true });
+        State.enemies.push({ el, x, y, w: eW, h: eH, alive: true });
         }
     }
 
     // if level 3 then spawn large mothership (hp > 1)
     if (level === 3) {
-        // Mothership size calculation
-        const msW = Math.floor(CONFIG.playerWidth * CONFIG.mothershipSizeFactor);
-        const msH = Math.floor(CONFIG.playerHeight * CONFIG.mothershipSizeFactor * 0.7);
+        // Mothership size calculation (scaled)
+        const msW = Math.floor(CONFIG.playerWidth * CONFIG.mothershipSizeFactor * scaleFactor);
+        const msH = Math.floor(CONFIG.playerHeight * CONFIG.mothershipSizeFactor * 0.7 * scaleFactor);
         const el = document.createElement("img");
         el.src = ASSETS.mothershipImg;
         el.style.position = "absolute";
         el.style.width = msW + "px";
         el.style.height = msH + "px";
         const startX = (State.width - msW) / 2;
+        const startY = 30 * scaleFactor;
         el.style.left = startX + "px";
-        el.style.top = "30px";
+        el.style.top = startY + "px";
         State.gameArea.appendChild(el);
 
-        // Mothership HP Bar setup
+        // Mothership HP Bar setup (scaled position)
         const hpContainer = document.createElement('div');
         hpContainer.className = 'mothership-hp-container';
         hpContainer.style.width = msW + "px";
         hpContainer.style.left = startX + "px";
-        hpContainer.style.top = (30 - 15) + "px"; // 15px above mothership
+        hpContainer.style.top = (startY - (15 * scaleFactor)) + "px"; // 15px above mothership
         
         const hpBar = document.createElement('div');
         hpBar.className = 'mothership-hp-bar';
@@ -280,7 +300,7 @@ function createEnemiesForLevel(level) {
 
         State.mothership = { 
             el, hpEl: hpContainer, hpBar, 
-            x: startX, y: 30, w: msW, h: msH, 
+            x: startX, y: startY, w: msW, h: msH, 
             hp: CONFIG.mothershipHP, maxHp: CONFIG.mothershipHP 
         };
     }
@@ -298,31 +318,42 @@ function spawnPlayerBullet() {
     // limit concurrent bullets
     if (State.bullets.length >= CONFIG.maxPlayerBullets) return;
     if (!State.player) return;
+    
+    const bW = 10 * scaleFactor;
+    const bH = 18 * scaleFactor;
+    const bOffset = 5 * scaleFactor;
+
     const el = document.createElement("img");
     el.src = ASSETS.playerBulletImg;
     el.style.position = "absolute";
-    el.style.width = "40px";
-    el.style.height = "50px";
-    // position at nose of player
-    const x = State.player.x + State.player.w / 2 - 5;
-    const y = State.player.y - 10;
+    // Scale bullet image
+    el.style.width = (40 * scaleFactor) + "px"; 
+    el.style.height = (50 * scaleFactor) + "px";
+    // position at nose of player (scaled)
+    const x = State.player.x + State.player.w / 2 - bOffset;
+    const y = State.player.y - (10 * scaleFactor);
     el.style.left = x + "px";
     el.style.top = y + "px";
     State.gameArea.appendChild(el);
-    State.bullets.push({ el, x, y, w: 10, h: 18 });
+    // Store actual collision box size (scaled)
+    State.bullets.push({ el, x, y, w: bW, h: bH });
     playShootSound();
 }
 
 function spawnEnemyBullet(fromX, fromY) {
+    const bW = 10 * scaleFactor;
+    const bH = 18 * scaleFactor;
+
     const el = document.createElement("img");
     el.src = ASSETS.enemyBulletImg;
     el.style.position = "absolute";
-    el.style.width = "20px";
-    el.style.height = "30px";
+    // Scale bullet image
+    el.style.width = (10 * scaleFactor) + "px";
+    el.style.height = (30 * scaleFactor) + "px";
     el.style.left = fromX + "px";
     el.style.top = fromY + "px";
     State.gameArea.appendChild(el);
-    State.enemyBullets.push({ el, x: fromX, y: fromY, w: 10, h: 18 });
+    State.enemyBullets.push({ el, x: fromX, y: fromY, w: bW, h: bH });
     playShootSound();
 }
 
@@ -333,30 +364,61 @@ function enemyShooting(now) {
     const alive = State.enemies.filter(e => e.alive);
     if (alive.length === 0) return;
 
+    const bOffset = 5 * scaleFactor;
+    const yOffset = 6 * scaleFactor;
+
     // pick a random alive enemy
     const shooter = alive[Math.floor(Math.random() * alive.length)];
-    const sx = shooter.x + shooter.w / 2 - 5;
-    const sy = shooter.y + shooter.h + 6;
+    const sx = shooter.x + shooter.w / 2 - bOffset;
+    const sy = shooter.y + shooter.h + yOffset;
     spawnEnemyBullet(sx, sy);
 }
 
 function mothershipShooting(now) {
     if (!State.mothership) return;
-    if (now - State.lastMothershipShootTime < CONFIG.mothershipShootIntervalMs) return;
+
+    // --- 1. Check for Cooldown/Gap between Bursts ---
+    if (State.mothershipInCooldown) {
+        // If 1 second has passed since the last burst ended, reset for a new burst.
+        if (now - State.lastMothershipShootTime >= CONFIG.mothershipBurstGapMs) {
+            State.mothershipInCooldown = false;
+            State.mothershipShotsFired = 0; // Reset shot counter
+        } else {
+            return; // Still waiting for the gap to finish
+        }
+    }
+
+    if (now - State.lastMothershipShootTime < CONFIG.mothershipShootIntervalMs) {
+        return; // Wait for the next shot interval
+    }
+    
+    // Check if the current burst is complete
+    if (State.mothershipShotsFired >= CONFIG.mothershipBurstCount) {
+        State.mothershipInCooldown = true;
+        State.lastMothershipShootTime = now; // Start the cooldown timer now
+        return; 
+    }
+
     State.lastMothershipShootTime = now;
     
     const ms = State.mothership;
-    // Mothership shoots multiple bullets from two positions
-    const sx1 = ms.x + ms.w * 0.25 - 5; // Quarter-point
-    const sx2 = ms.x + ms.w * 0.75 - 5; // Three-quarter point
-    const sy = ms.y + ms.h + 6;
+    const bOffset = 5 * scaleFactor;
+    const yOffset = 6 * scaleFactor;
+
+    const sx1 = ms.x + ms.w * 0.25 - bOffset; // Quarter-point
+    const sx2 = ms.x + ms.w * 0.75 - bOffset; // Three-quarter point
+    const sy = ms.y + ms.h + yOffset;
 
     spawnEnemyBullet(sx1, sy);
     spawnEnemyBullet(sx2, sy);
+
+    // Increase the shot counter (since it fires two bullets at once, this counts as 1 firing sequence)
+    State.mothershipShotsFired++; 
 }
 
 
-function spawnExplosionAt(x, y, size = 60) {
+function spawnExplosionAt(x, y, baseSize = 60) {
+    const size = baseSize * scaleFactor; // Scale explosion size
     const e = document.createElement("img");
     e.src = ASSETS.explosion;
     e.style.position = "absolute";
@@ -379,11 +441,23 @@ function processCollisions() {
   // player bullets vs enemies
   for (let i = State.bullets.length - 1; i >= 0; i--) {
     const b = State.bullets[i];
-    const bRect = b.el.getBoundingClientRect();
+    // Update coordinates for bounding box check (since bullet el size is fixed but logical x/y move)
+    b.x = parseFloat(b.el.style.left); 
+    b.y = parseFloat(b.el.style.top);
+
+    // Construct a scaled bounding box for the bullet 
+    const bRect = { 
+      left: b.x, top: b.y, 
+      right: b.x + b.w, bottom: b.y + b.h 
+    };
 
     // mothership first (if present)
     if (State.mothership) {
-      const msRect = State.mothership.el.getBoundingClientRect();
+      const ms = State.mothership;
+      const msRect = { 
+        left: ms.x, top: ms.y, 
+        right: ms.x + ms.w, bottom: ms.y + ms.h 
+      };
       if (rectsOverlap(bRect, msRect)) {
         // hit mothership
         State.mothership.hp -= 1;
@@ -409,7 +483,10 @@ function processCollisions() {
     for (let j = 0; j < State.enemies.length; j++) {
       const en = State.enemies[j];
       if (!en.alive) continue;
-      const enRect = en.el.getBoundingClientRect();
+      const enRect = { 
+        left: en.x, top: en.y, 
+        right: en.x + en.w, bottom: en.y + en.h 
+      };
       if (rectsOverlap(bRect, enRect)) {
         // enemy killed
         en.alive = false;
@@ -427,9 +504,22 @@ function processCollisions() {
   // enemy bullets vs player
   for (let i = State.enemyBullets.length - 1; i >= 0; i--) {
     const eb = State.enemyBullets[i];
-    const ebRect = eb.el.getBoundingClientRect();
+    // Update coordinates
+    eb.x = parseFloat(eb.el.style.left); 
+    eb.y = parseFloat(eb.el.style.top);
+
+    const ebRect = { 
+      left: eb.x, top: eb.y, 
+      right: eb.x + eb.w, bottom: eb.y + eb.h 
+    };
     if (!State.player) continue;
-    const pRect = State.player.el.getBoundingClientRect();
+    
+    const p = State.player;
+    const pRect = { 
+      left: p.x, top: p.y, 
+      right: p.x + p.w, bottom: p.y + p.h 
+    };
+
     if (rectsOverlap(ebRect, pRect)) {
       // player hit
       spawnExplosionAt(State.player.x + State.player.w / 2, State.player.y + State.player.h / 2, 50);
@@ -475,8 +565,9 @@ function handlePlayerHit(enemyReached = false) {
     setTimeout(() => {
         // respawn player in center-bottom
         if (State.player && State.player.el) {
+        const startYOffset = 30 * scaleFactor;
         State.player.x = (State.width - State.player.w) / 2;
-        State.player.y = State.height - State.player.h - 30;
+        State.player.y = State.height - State.player.h - startYOffset;
         State.player.el.style.left = State.player.x + "px";
         State.player.el.style.top = State.player.y + "px";
         State.player.el.style.visibility = "visible";
@@ -540,7 +631,10 @@ function moveEnemiesTick() {
     const alive = State.enemies.filter(e => e.alive);
     if (alive.length === 0) return;
 
-    const speed = CONFIG.enemyMoveSpeedBase + 0.15 * (State.level - 1);
+    // Speed and drop distance are scaled
+    const speed = (CONFIG.enemyMoveSpeedBase + 0.15 * (State.level - 1)) * scaleFactor;
+    const dropDistance = CONFIG.enemyDropOnEdge * scaleFactor;
+
     // compute bounds of alive enemies
     let minX = Infinity, maxX = -Infinity;
     alive.forEach(e => {
@@ -551,10 +645,10 @@ function moveEnemiesTick() {
     // if edge reached, flip direction and drop
     if (enemyDirection === 1 && maxX + speed >= State.width - GAME_AREA_PADDING) {
         enemyDirection = -1;
-        alive.forEach(e => { e.y += CONFIG.enemyDropOnEdge; e.el.style.top = e.y + "px"; });
+        alive.forEach(e => { e.y += dropDistance; e.el.style.top = e.y + "px"; });
     } else if (enemyDirection === -1 && minX - speed <= GAME_AREA_PADDING) {
         enemyDirection = 1;
-        alive.forEach(e => { e.y += CONFIG.enemyDropOnEdge; e.el.style.top = e.y + "px"; });
+        alive.forEach(e => { e.y += dropDistance; e.el.style.top = e.y + "px"; });
     } else {
         // move horizontally
         alive.forEach(e => {
@@ -566,7 +660,7 @@ function moveEnemiesTick() {
     // mothership can slowly move left-right on level 3
     if (State.mothership) {
         const ms = State.mothership;
-        if (!ms.vx) ms.vx = 0.9 * enemyDirection;
+        if (!ms.vx) ms.vx = 0.9 * enemyDirection * scaleFactor; // Scaled velocity
         ms.x += ms.vx;
         // reverse if near edges
         if (ms.x <= GAME_AREA_PADDING || ms.x + ms.w >= State.width - GAME_AREA_PADDING) {
@@ -640,23 +734,25 @@ function gameLoop(now) {
 
     if (State.paused) return;
 
-  // Player movement from keys
+  // Player movement from keys (speed is scaled)
+const playerSpeedScaled = CONFIG.playerSpeed * scaleFactor;
 if (State.player) {
     const maxWidth = State.width - State.player.w;
     if (State.keys["arrowleft"] || State.keys["a"]) {
-      State.player.x = clamp(State.player.x - CONFIG.playerSpeed, 0, maxWidth);
+      State.player.x = clamp(State.player.x - playerSpeedScaled, 0, maxWidth);
       State.player.el.style.left = State.player.x + "px";
     }
     if (State.keys["arrowright"] || State.keys["d"]) {
-      State.player.x = clamp(State.player.x + CONFIG.playerSpeed, 0, maxWidth);
+      State.player.x = clamp(State.player.x + playerSpeedScaled, 0, maxWidth);
       State.player.el.style.left = State.player.x + "px";
     }
 }
 
-  // Move player bullets up
+  // Move player bullets up (speed is scaled)
+const bulletSpeedScaled = CONFIG.bulletSpeed * scaleFactor;
 for (let i = State.bullets.length - 1; i >= 0; i--) {
     const b = State.bullets[i];
-    b.y -= CONFIG.bulletSpeed;
+    b.y -= bulletSpeedScaled;
     if (b.y + b.h < 0) {
       try { b.el.remove(); } catch (e) {}
       State.bullets.splice(i, 1);
@@ -666,10 +762,11 @@ for (let i = State.bullets.length - 1; i >= 0; i--) {
     b.x = parseFloat(b.el.style.left);
 }
 
-  // Move enemy bullets down
+  // Move enemy bullets down (speed is scaled)
+const enemyBulletSpeedScaled = CONFIG.enemyBulletSpeed * scaleFactor;
 for (let i = State.enemyBullets.length - 1; i >= 0; i--) {
     const eb = State.enemyBullets[i];
-    eb.y += CONFIG.enemyBulletSpeed;
+    eb.y += enemyBulletSpeedScaled;
     if (eb.y > State.height + 20) {
         try { eb.el.remove(); } catch (e) {}
         State.enemyBullets.splice(i, 1);
@@ -790,17 +887,55 @@ window.addEventListener("resize", () => {
       State.width = State.gameArea.clientWidth;
       State.height = State.gameArea.clientHeight;
     } else {
+      // Fallback if game area is somehow not there, although CSS should place it
       State.width = window.innerWidth * 0.9;
-      State.height = window.innerHeight;
+      State.height = window.innerHeight * 0.9;
     }
+
+    calculateScaleFactor(); // Important: Recalculate scale on resize!
     
+    // Update Player dimensions and reposition
     if (State.player && State.player.el) {
+        const pW = CONFIG.playerWidth * scaleFactor;
+        const pH = CONFIG.playerHeight * scaleFactor;
+        const startYOffset = 30 * scaleFactor;
+        
+        State.player.w = pW;
+        State.player.h = pH;
+        State.player.el.style.width = pW + "px";
+        State.player.el.style.height = pH + "px";
+
         // Reposition player for new height/width
-        State.player.y = State.height - State.player.h - 30;
-        State.player.el.style.top = State.player.y + "px";
+        State.player.y = State.height - State.player.h - startYOffset;
         State.player.x = clamp(State.player.x, 0, State.width - State.player.w);
+
+        State.player.el.style.top = State.player.y + "px";
         State.player.el.style.left = State.player.x + "px";
     }
+
+    // Update Mothership dimensions and reposition (if alive)
+    if (State.mothership) {
+        const msW = Math.floor(CONFIG.playerWidth * CONFIG.mothershipSizeFactor * scaleFactor);
+        const msH = Math.floor(CONFIG.playerHeight * CONFIG.mothershipSizeFactor * 0.7 * scaleFactor);
+        const startY = 30 * scaleFactor;
+
+        // Update object size properties
+        State.mothership.w = msW;
+        State.mothership.h = msH;
+        State.mothership.y = startY;
+
+        // Update element styles
+        State.mothership.el.style.width = msW + "px";
+        State.mothership.el.style.height = msH + "px";
+        State.mothership.el.style.top = startY + "px";
+
+        // Update HP bar
+        State.mothership.hpEl.style.width = msW + "px";
+        State.mothership.hpEl.style.top = (startY - (15 * scaleFactor)) + "px";
+    }
+
+    // Note: Enemies and bullets positions/sizes will be slightly off until next level or collision update, 
+    // but their movement will be corrected by the next gameLoop frame using the new scaleFactor.
 });
 
 initializeGame();
