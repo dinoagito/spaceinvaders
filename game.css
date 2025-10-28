@@ -22,11 +22,9 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%); 
-
     border: 8px solid #33cc33; 
     box-shadow: 0 0 30px rgba(0, 200, 0, 0.8); 
     background-color: #000; 
-
     background-image: url("images/bg.gif");
     background-size: cover;
     background-position: center;
@@ -36,13 +34,14 @@ body {
 
 #hud {
     position: fixed;
-    top: 10px;
-    left: 10px;
+    top: 1.5vw; 
+    left: 1.5vw;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 15px 20px;
-    width: 180px;
+    gap: 0.8vw; 
+    padding: 1.5vw 2vw; 
+    width: 15vw; 
+    max-width: 180px; 
 
     background: rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(0, 255, 255, 0.4);
@@ -50,13 +49,14 @@ body {
     box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
     color: #00ffff;
     font-family: 'Press Start 2P', monospace;
-    font-size: 16px;
+    font-size: 1.4vw; 
+    max-inline-size: 16px;
     text-shadow: 0 0 6px rgba(0,255,255,0.7);
     z-index: 10001;
 }
 
 #hud div {
-    padding: 5px 0;
+    padding: 0.5vw 0; 
     border-bottom: 1px solid rgba(0,255,255,0.2);
 }
 
@@ -75,14 +75,16 @@ body {
 }
 
 #menu-btn {
-    margin-top: 20px;
+    margin-top: 1.5vw; 
     
     background-color: #00FF66; 
     color: black; 
     border: 2px solid #00FF66;
     font-family: 'Press Start 2P', monospace;
+    font-size: 1.2vw;
+    max-inline-size: 14px;
     text-transform: uppercase;
-    padding: 10px 15px;
+    padding: 1vw 1.5vw; 
     cursor: pointer;
     transition: 0.2s;
     position: relative; 
