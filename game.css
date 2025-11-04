@@ -144,18 +144,3 @@ body {
     animation: screenWipe 1.2s ease-in-out forwards; 
 }
 
-@media (max-width: 600px) {
-    #hud {
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 90vw;
-        align-items: center;
-        text-align: center;
-    }
-
-    #menu-btn {
-        font-size: 3vw;
-        padding: 2vh 4vw;
-    }
-}
