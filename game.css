@@ -34,30 +34,31 @@ body {
 
 #hud {
     position: fixed;
-    top: 1.5vw; 
-    left: 1.5vw;
+    top: 20px;
+    left: 20px;
     display: flex;
     flex-direction: column;
-    gap: 0.8vw; 
-    padding: 1.5vw 2vw; 
-    width: 15vw; 
-    max-width: 180px; 
+    align-items: flex-start;
+    gap: 10px;
+    padding: 20px;
+    width: 200px;
 
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(0, 255, 255, 0.4);
-    border-radius: 10px;
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid #00ffff;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+
     color: #00ffff;
     font-family: 'Press Start 2P', monospace;
-    font-size: 1.4vw; 
-    max-inline-size: 16px;
+    font-size: 11px;
     text-shadow: 0 0 6px rgba(0,255,255,0.7);
     z-index: 10001;
 }
 
 #hud div {
-    padding: 0.5vw 0; 
-    border-bottom: 1px solid rgba(0,255,255,0.2);
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(0,255,255,0.3);
+    width: 100%;
 }
 
 #hud div:last-child {
@@ -74,21 +75,22 @@ body {
     text-shadow: 0 0 8px #ff4c4c;
 }
 
+
 #menu-btn {
-    margin-top: 1.5vw; 
-    
-    background-color: #00FF66; 
-    color: black; 
+    margin-top: 15px;
+    background-color: #00FF66;
+    color: black;
     border: 2px solid #00FF66;
+    border-radius: 8px;
     font-family: 'Press Start 2P', monospace;
-    font-size: 1.2vw;
-    max-inline-size: 14px;
+    font-size: 10px;
     text-transform: uppercase;
-    padding: 1vw 1.5vw; 
+    line-height: 1.5;
+    padding: 10px 14px;
+    width: 100%;
+    text-align: center;
     cursor: pointer;
     transition: 0.2s;
-    position: relative; 
-    display: block; 
 }
 
 #menu-btn:hover {
